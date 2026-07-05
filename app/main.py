@@ -8,6 +8,8 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 
+from app import market_data
+from app.influx import InfluxQueryError, InfluxReader
 from skills.custom.crypto_market_anomaly.handler import analyze_market_anomaly
 
 
@@ -64,6 +66,12 @@ SAMPLE_MARKET_DATA: dict[str, dict[str, Any]] = {
 }
 
 
+def get_reader() -> InfluxReader | None:
+    """Live InfluxDB reader when INFLUXDB_READ_TOKEN/INFLUXDB_TOKEN is set;
+    otherwise the API serves sample data so tests and local dev need no Influx."""
+    return InfluxReader.from_env()
+
+
 def verify_api_token(authorization: str | None = Header(default=None)) -> None:
     expected_token = os.getenv("HERMES_API_TOKEN")
     if not expected_token:
@@ -89,18 +97,42 @@ def health() -> dict[str, str]:
 
 
 @app.get("/symbols")
-def symbols(_: None = Depends(verify_api_token)) -> dict[str, list[str]]:
-    return {"symbols": sorted(SAMPLE_MARKET_DATA)}
+def symbols(_: None = Depends(verify_api_token)) -> dict[str, list[str] | str]:
+    reader = get_reader()
+    if reader is None:
+        return {"symbols": sorted(SAMPLE_MARKET_DATA), "mode": "sample"}
+    try:
+        return {"symbols": market_data.list_symbols(reader), "mode": "live"}
+    except InfluxQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 def build_market_anomaly_input(symbol: str, window: str = "5m") -> dict[str, Any]:
     normalized_symbol = symbol.upper()
-    if normalized_symbol not in SAMPLE_MARKET_DATA:
-        raise HTTPException(status_code=404, detail=f"Unknown symbol: {normalized_symbol}")
+    reader = get_reader()
 
-    payload = deepcopy(SAMPLE_MARKET_DATA[normalized_symbol])
-    payload["window"] = window
-    payload["timestamp"] = datetime.now(timezone.utc).isoformat()
+    if reader is None:
+        if normalized_symbol not in SAMPLE_MARKET_DATA:
+            raise HTTPException(status_code=404, detail=f"Unknown symbol: {normalized_symbol}")
+        payload = deepcopy(SAMPLE_MARKET_DATA[normalized_symbol])
+        payload["window"] = window
+        payload["timestamp"] = datetime.now(timezone.utc).isoformat()
+        payload["mode"] = "sample"
+        return payload
+
+    try:
+        payload = market_data.build_anomaly_input(reader, normalized_symbol, window)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InfluxQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No recent market data for symbol: {normalized_symbol}",
+        )
+    payload["mode"] = "live"
     return payload
 
 
@@ -111,6 +143,28 @@ def market_anomaly_input(
     _: None = Depends(verify_api_token),
 ) -> dict[str, Any]:
     return build_market_anomaly_input(symbol=symbol, window=window)
+
+
+@app.get("/ma/state")
+def ma_state(
+    symbol: str = Query(..., description="Trading pair, e.g. SOLUSDT"),
+    _: None = Depends(verify_api_token),
+) -> dict[str, Any]:
+    reader = get_reader()
+    if reader is None:
+        raise HTTPException(
+            status_code=503,
+            detail="InfluxDB not configured; /ma/state has no sample mode.",
+        )
+    try:
+        payload = market_data.build_ma_state(reader, symbol)
+    except InfluxQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if payload is None:
+        raise HTTPException(
+            status_code=404, detail=f"No crypto_ma data for symbol: {symbol.upper()}"
+        )
+    return payload
 
 
 @app.post("/analysis/anomaly")
