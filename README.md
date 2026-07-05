@@ -94,6 +94,35 @@ The current app is `crypto-market-anomaly`. Candidate future apps include:
 
 See [docs/hermes-v2-roadmap.md](docs/hermes-v2-roadmap.md) for the architecture direction and version path.
 
+## Hermes v1.1 Planner Gate
+
+Hermes v1.1 adds a small planning layer before financial skills run:
+
+```text
+User
+  -> Hermes Planner Gate
+  -> Unknown Discovery
+  -> Skill Router
+  -> Financial Skill
+  -> Reporter
+  -> Memory / Event Log
+```
+
+The planner checks what the user wants, which fields are available, which skill should handle the request, and whether missing data should block execution.
+
+Run the planner:
+
+```bash
+python3 skills/custom/hermes-planner/handler.py --input-file examples/planner-request.json
+python3 skills/custom/hermes-planner/handler.py --input-file examples/planner-request.json --json
+```
+
+Planner docs:
+
+- [docs/planner-protocol.md](docs/planner-protocol.md)
+- [docs/unknown-discovery-agent.md](docs/unknown-discovery-agent.md)
+- [docs/skill-registry.md](docs/skill-registry.md)
+
 ## Executable MVP
 
 This repo now includes the minimal executable pieces:
@@ -144,10 +173,15 @@ docs/
   api-contract.md
   event-log-template.md
   hermes-call-flow.md
+  hermes-v2-roadmap.md
+  planner-protocol.md
   safety-rules.md
+  skill-registry.md
+  unknown-discovery-agent.md
   jetson-install.md
 examples/
   anomaly-input.json
+  planner-request.json
 skills/
   custom/
     crypto-market-anomaly/
@@ -155,14 +189,20 @@ skills/
       handler.py
     crypto_market_anomaly/
       handler.py
+    hermes-planner/
+      SKILL.md
+      handler.py
+    hermes_planner/
+      handler.py
 tests/
   test_crypto_market_anomaly.py
+  test_hermes_planner.py
 ```
 
 Hermes-callable handler:
 
 ```bash
-python skills/custom/crypto-market-anomaly/handler.py < examples/anomaly-input.json
+python3 skills/custom/crypto-market-anomaly/handler.py < examples/anomaly-input.json
 ```
 
 Hermes-callable ServerA request:
@@ -170,7 +210,7 @@ Hermes-callable ServerA request:
 ```bash
 export HERMES_FINANCIAL_API_URL="http://SERVER_A_HOST:8010"
 export HERMES_API_TOKEN="replace-with-server-token"
-python skills/custom/crypto-market-anomaly/handler.py --symbol BTCUSDT
+python3 skills/custom/crypto-market-anomaly/handler.py --symbol BTCUSDT
 ```
 
 ## Public Safety

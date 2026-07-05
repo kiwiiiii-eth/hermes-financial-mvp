@@ -113,11 +113,16 @@ Done:
 
 ### v1.1: Operational Polish
 
+Started:
+
+- Add a Planner Gate before financial skills run.
+- Add Unknown Discovery checks for missing fields and missing research context.
+- Add a lightweight skill registry document.
+
 Next:
 
 - Add a direct Telegram or Discord command path such as `/analyze BTCUSDT`.
 - Write each completed report to a Markdown event log.
-- Add a lightweight skill registry document.
 - Add deployment health checks and restart notes.
 - Connect the API to live InfluxDB query helpers instead of sample payloads.
 

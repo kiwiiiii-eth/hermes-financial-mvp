@@ -1,0 +1,15 @@
+{
+  "user_request": "分析 BTCUSDT 是否有市場異常",
+  "symbol": "BTCUSDT",
+  "available_fields": [
+    "symbol",
+    "current_price",
+    "price_change_5m",
+    "funding_rate",
+    "funding_change",
+    "open_interest",
+    "oi_change_5m",
+    "volume_change_5m"
+  ],
+  "requested_capabilities": ["market anomaly"]
+}
