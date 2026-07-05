@@ -144,6 +144,14 @@ Hermes-callable handler:
 python skills/custom/crypto-market-anomaly/handler.py < examples/anomaly-input.json
 ```
 
+Hermes-callable ServerA request:
+
+```bash
+export HERMES_FINANCIAL_API_URL="http://SERVER_A_HOST:8010"
+export HERMES_API_TOKEN="replace-with-server-token"
+python skills/custom/crypto-market-anomaly/handler.py --symbol BTCUSDT
+```
+
 ## Public Safety
 
 This repo intentionally contains no credentials, host IPs, SSH aliases, private paths, or trading API keys.

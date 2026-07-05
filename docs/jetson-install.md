@@ -72,6 +72,25 @@ curl -s -H "Authorization: Bearer $HERMES_API_TOKEN" \
   | python ~/.hermes/skills/custom/crypto-market-anomaly/handler.py
 ```
 
+Or configure the environment once:
+
+```bash
+cat > ~/.hermes/crypto-market-anomaly.env <<'EOF'
+HERMES_FINANCIAL_API_URL=http://SERVER_A_HOST:8010
+HERMES_API_TOKEN=replace-with-server-token
+EOF
+chmod 600 ~/.hermes/crypto-market-anomaly.env
+```
+
+Then Hermes can run:
+
+```bash
+set -a
+source ~/.hermes/crypto-market-anomaly.env
+set +a
+python3 ~/.hermes/skills/custom/crypto-market-anomaly/handler.py --symbol BTCUSDT
+```
+
 ## Network Exposure
 
 Recommended order:

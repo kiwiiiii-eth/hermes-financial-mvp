@@ -44,6 +44,12 @@ curl -s -H "Authorization: Bearer $HERMES_API_TOKEN" \
   | python skills/custom/crypto-market-anomaly/handler.py --json
 ```
 
+If `HERMES_FINANCIAL_API_URL` and `HERMES_API_TOKEN` are set, the handler can fetch the API itself:
+
+```bash
+python skills/custom/crypto-market-anomaly/handler.py --symbol BTCUSDT
+```
+
 ## Local Development
 
 ```bash

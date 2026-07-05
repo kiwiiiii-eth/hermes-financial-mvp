@@ -4,9 +4,12 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 
 def _load_analyzer():
@@ -58,13 +61,40 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to anomaly-input JSON. If omitted, JSON is read from stdin.",
     )
     parser.add_argument(
+        "--symbol",
+        help="Fetch anomaly-input JSON from HERMES_FINANCIAL_API_URL for this symbol.",
+    )
+    parser.add_argument(
+        "--window",
+        default="5m",
+        help="Analysis window for --symbol mode. Default: 5m.",
+    )
+    parser.add_argument(
+        "--api-url",
+        default=os.getenv("HERMES_FINANCIAL_API_URL", ""),
+        help="Base FastAPI URL. Defaults to HERMES_FINANCIAL_API_URL.",
+    )
+    parser.add_argument(
+        "--token",
+        default=os.getenv("HERMES_API_TOKEN", ""),
+        help="Bearer token. Defaults to HERMES_API_TOKEN.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Print full JSON analysis instead of only telegram_message.",
     )
     args = parser.parse_args(argv)
 
-    payload = _load_payload(args.input_file)
+    if args.symbol:
+        payload = _fetch_payload(
+            api_url=args.api_url,
+            token=args.token,
+            symbol=args.symbol,
+            window=args.window,
+        )
+    else:
+        payload = _load_payload(args.input_file)
     result = analyze_market_anomaly(payload)
 
     if args.json:
@@ -91,6 +121,35 @@ def _load_payload(input_file: str | None) -> dict[str, Any]:
 
     if not isinstance(payload, dict):
         raise SystemExit("JSON payload must be an object.")
+
+    return payload
+
+
+def _fetch_payload(*, api_url: str, token: str, symbol: str, window: str) -> dict[str, Any]:
+    if not api_url:
+        raise SystemExit("Missing API URL. Set HERMES_FINANCIAL_API_URL or pass --api-url.")
+    if not token:
+        raise SystemExit("Missing bearer token. Set HERMES_API_TOKEN or pass --token.")
+
+    base = api_url.rstrip("/")
+    query = urlencode({"symbol": symbol.upper(), "window": window})
+    request = Request(
+        f"{base}/market/anomaly-input?{query}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            raw = response.read().decode("utf-8")
+    except Exception as exc:
+        raise SystemExit(f"Failed to fetch anomaly input: {exc}") from exc
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"API returned invalid JSON: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise SystemExit("API response must be a JSON object.")
 
     return payload
 

@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
 
@@ -164,3 +165,51 @@ def test_skill_handler_cli_json_mode(tmp_path):
     assert result["symbol"] == "BTCUSDT"
     assert result["anomaly_type"] == "Funding 異常"
     assert result["needs_human_confirmation"] is True
+
+
+def test_skill_handler_cli_fetches_api_payload(monkeypatch):
+    import skills.custom.crypto_market_anomaly.handler as analyzer
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return json.dumps(complete_payload()).encode("utf-8")
+
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["authorization"] = request.headers.get("Authorization")
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    wrapper_path = Path("skills/custom/crypto-market-anomaly/handler.py")
+    wrapper_globals = {"__file__": str(wrapper_path)}
+    exec(wrapper_path.read_text(encoding="utf-8"), wrapper_globals)
+    monkeypatch.setitem(wrapper_globals, "analyze_market_anomaly", analyzer.analyze_market_anomaly)
+    monkeypatch.setitem(wrapper_globals, "urlopen", fake_urlopen)
+
+    code = wrapper_globals["main"](
+        [
+            "--symbol",
+            "btcusdt",
+            "--api-url",
+            "http://server-a.local:8010",
+            "--token",
+            "test-token",
+            "--json",
+        ]
+    )
+
+    parsed = urlparse(captured["url"])
+    query = parse_qs(parsed.query)
+    assert code == 0
+    assert parsed.path == "/market/anomaly-input"
+    assert query["symbol"] == ["BTCUSDT"]
+    assert query["window"] == ["5m"]
+    assert captured["authorization"] == "Bearer test-token"
