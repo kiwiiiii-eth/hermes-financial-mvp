@@ -1,6 +1,6 @@
 ---
 name: crypto-market-anomaly
-description: "Use when analyzing read-only crypto market anomalies."
+description: "Use when analyzing Price/Funding/OI crypto anomalies."
 version: 1.0.0
 author: kiwi
 license: MIT
@@ -24,6 +24,16 @@ Executable logic for this repo lives in two layers:
 - `skills/custom/crypto-market-anomaly/handler.py` is the Hermes-callable CLI wrapper.
 - `skills/custom/crypto_market_anomaly/handler.py` is the importable deterministic Python classifier used by FastAPI and tests.
 
+MVP v1 is intentionally narrow. The only analysis inputs are `symbol`, `current_price`, `price_change_5m`, `funding_rate`, `funding_change`, `open_interest`, `oi_change_5m`, `volume_change_5m`, `sources`, and `data_quality`.
+
+Do not expand the analysis to RSI, MACD, Bollinger Bands, moving averages, liquidation data, CVD, orderbook depth, volatility, K-line patterns, or any other indicator unless that field is explicitly present in the input JSON or the user explicitly asks for a later version.
+
+If the user asks in abstract terms how this skill analyzes anomalies, answer exactly in this shape:
+
+```text
+我只讀 anomaly-input JSON 裡的 Price、Funding、OI、Volume 與 data_quality，檢查缺欄位後分類成五種 MVP v1 異常之一，最後輸出七段式報告；預設只通知，不交易。
+```
+
 ## When to Use
 
 - Use when the user asks Hermes to analyze crypto market anomalies.
@@ -33,6 +43,16 @@ Executable logic for this repo lives in two layers:
 - Use when a Telegram command such as `/analyze BTCUSDT` should call the read-only FastAPI API, run the handler, and return a fixed-format report.
 
 Do not use this skill to place orders, close positions, change leverage, or produce direct trade instructions.
+
+If asked "how would you analyze this?", answer using only the MVP v1 flow:
+
+```text
+Fetch anomaly-input JSON
+-> verify required fields and data_quality
+-> classify into one of the five allowed anomaly types
+-> output the seven required report sections
+-> notify only, no trade
+```
 
 ## Required Input
 
@@ -86,6 +106,7 @@ Every response must include:
 - Never say "一定會漲".
 - Never say "一定會跌".
 - Never invent data.
+- Never mention RSI, MACD, Bollinger Bands, moving averages, liquidation data, CVD, orderbook depth, volatility, or K-line patterns unless provided by the input JSON.
 - If data is missing, say "資料不足".
 - Default to notification only.
 - Suggested actions may include observe, wait, log the event, check again, request missing data, or request human confirmation.
