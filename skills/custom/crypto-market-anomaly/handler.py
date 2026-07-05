@@ -2,17 +2,51 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+def _load_analyzer():
+    here = Path(__file__).resolve()
 
-from skills.custom.crypto_market_anomaly.handler import analyze_market_anomaly  # noqa: E402
+    # Repo checkout layout:
+    #   <repo>/skills/custom/crypto-market-anomaly/handler.py
+    repo_root = here.parents[3]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    try:
+        from skills.custom.crypto_market_anomaly.handler import analyze_market_anomaly
+
+        return analyze_market_anomaly
+    except ModuleNotFoundError:
+        pass
+
+    # Hermes user-local skill layout:
+    #   ~/.hermes/skills/custom/crypto-market-anomaly/handler.py
+    #   ~/.hermes/skills/custom/crypto_market_anomaly/handler.py
+    sibling_handler = here.parent.parent / "crypto_market_anomaly" / "handler.py"
+    if sibling_handler.exists():
+        spec = importlib.util.spec_from_file_location(
+            "crypto_market_anomaly_runtime",
+            sibling_handler,
+        )
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[spec.name] = module
+            spec.loader.exec_module(module)
+            return module.analyze_market_anomaly
+
+    raise SystemExit(
+        "Cannot locate analyzer. Install the full repo or copy "
+        "skills/custom/crypto_market_anomaly next to this skill."
+    )
+
+
+analyze_market_anomaly = _load_analyzer()
 
 
 def main(argv: list[str] | None = None) -> int:
