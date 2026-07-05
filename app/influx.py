@@ -44,10 +44,15 @@ class InfluxReader:
                 params={"org": self.org},
                 headers={
                     "Authorization": f"Token {self._token}",
-                    "Content-Type": "application/vnd.flux",
                     "Accept": "application/csv",
                 },
-                content=flux,
+                # JSON body so we can request annotations; without them the
+                # CSV has no #datatype row and every value parses as string.
+                json={
+                    "query": flux,
+                    "type": "flux",
+                    "dialect": {"annotations": ["group", "datatype", "default"]},
+                },
                 timeout=self._timeout,
             )
         except httpx.HTTPError as exc:
