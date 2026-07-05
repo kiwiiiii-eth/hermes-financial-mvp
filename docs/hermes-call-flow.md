@@ -24,6 +24,22 @@ curl "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m"
 curl "http://SERVER_A_HOST:8000/analyze/BTCUSDT"
 ```
 
+## Hermes-Callable Handler
+
+Hermes can call the executable skill handler directly after fetching JSON from the API:
+
+```bash
+curl -s "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
+  | python skills/custom/crypto-market-anomaly/handler.py
+```
+
+For structured JSON output:
+
+```bash
+curl -s "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
+  | python skills/custom/crypto-market-anomaly/handler.py --json
+```
+
 ## Local Development
 
 ```bash

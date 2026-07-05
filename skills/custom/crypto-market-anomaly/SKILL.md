@@ -19,7 +19,10 @@ Use this skill to analyze crypto market anomaly inputs from a read-only data API
 
 This skill explains abnormal Price / Funding / Open Interest conditions and formats a notification-ready response. It does not trade, predict certainty, or provide leverage advice.
 
-Executable logic for this repo lives in `skills/custom/crypto_market_anomaly/handler.py`. The `SKILL.md` file is the Hermes instruction layer; `handler.py` is the deterministic Python classifier used by the FastAPI MVP.
+Executable logic for this repo lives in two layers:
+
+- `skills/custom/crypto-market-anomaly/handler.py` is the Hermes-callable CLI wrapper.
+- `skills/custom/crypto_market_anomaly/handler.py` is the importable deterministic Python classifier used by FastAPI and tests.
 
 ## When to Use
 
@@ -118,6 +121,30 @@ price 上漲但 funding 為負，方向不一致，可能不是單純趨勢。
 需要；若要接近交易決策，必須人工確認盤口、跨所價差與資料品質。
 ```
 
+## Executable Handler
+
+Hermes can call the handler with JSON from stdin:
+
+```bash
+python skills/custom/crypto-market-anomaly/handler.py < examples/anomaly-input.json
+```
+
+For full structured output:
+
+```bash
+python skills/custom/crypto-market-anomaly/handler.py --input-file examples/anomaly-input.json --json
+```
+
+Expected flow:
+
+```text
+/analyze BTCUSDT
+-> call FastAPI /market/anomaly-input?symbol=BTCUSDT&window=5m
+-> pipe the returned JSON to handler.py
+-> return telegram_message
+-> do not trade
+```
+
 ## Common Pitfalls
 
 1. Treating anomalies as trade signals. This skill only explains market conditions.
@@ -133,4 +160,5 @@ price 上漲但 funding 為負，方向不一致，可能不是單純趨勢。
 - [ ] The response includes all seven required sections.
 - [ ] No certainty language is used.
 - [ ] No trade execution instruction is included.
+- [ ] `python skills/custom/crypto-market-anomaly/handler.py < examples/anomaly-input.json` returns a fixed report.
 - [ ] `pytest -q` passes for complete data, missing data, and contradictory-signal cases.

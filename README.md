@@ -122,10 +122,17 @@ skills/
   custom/
     crypto-market-anomaly/
       SKILL.md
+      handler.py
     crypto_market_anomaly/
       handler.py
 tests/
   test_crypto_market_anomaly.py
+```
+
+Hermes-callable handler:
+
+```bash
+python skills/custom/crypto-market-anomaly/handler.py < examples/anomaly-input.json
 ```
 
 ## Public Safety

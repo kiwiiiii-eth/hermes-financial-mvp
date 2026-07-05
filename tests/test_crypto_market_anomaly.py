@@ -1,3 +1,8 @@
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -93,3 +98,36 @@ def test_fastapi_analyze_symbol_endpoint():
         "假突破",
         "無明確訊號",
     }
+
+
+def test_skill_handler_cli_reads_stdin_and_prints_report():
+    handler = Path("skills/custom/crypto-market-anomaly/handler.py")
+    proc = subprocess.run(
+        [sys.executable, str(handler)],
+        input=json.dumps(complete_payload()),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    assert "[Hermes 市場異常] BTCUSDT" in proc.stdout
+    assert "分類：Funding 異常" in proc.stdout
+    assert "7. 是否需要人工確認" in proc.stdout
+
+
+def test_skill_handler_cli_json_mode(tmp_path):
+    input_file = tmp_path / "payload.json"
+    input_file.write_text(json.dumps(complete_payload()), encoding="utf-8")
+
+    handler = Path("skills/custom/crypto-market-anomaly/handler.py")
+    proc = subprocess.run(
+        [sys.executable, str(handler), "--input-file", str(input_file), "--json"],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    result = json.loads(proc.stdout)
+
+    assert result["symbol"] == "BTCUSDT"
+    assert result["anomaly_type"] == "Funding 異常"
+    assert result["needs_human_confirmation"] is True

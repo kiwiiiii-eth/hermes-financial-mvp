@@ -24,9 +24,10 @@ cp skills/custom/crypto-market-anomaly/SKILL.md ~/.hermes/skills/custom/crypto-m
 If you also want the executable Python handler available on the Jetson machine:
 
 ```bash
-mkdir -p ~/.hermes/skills/custom/crypto_market_anomaly
-cp skills/custom/crypto_market_anomaly/handler.py ~/.hermes/skills/custom/crypto_market_anomaly/handler.py
+cp skills/custom/crypto-market-anomaly/handler.py ~/.hermes/skills/custom/crypto-market-anomaly/handler.py
 ```
+
+If you deploy the full repo on Jetson, the wrapper imports the shared classifier from `skills/custom/crypto_market_anomaly/handler.py`.
 
 ## Verify
 
@@ -61,3 +62,10 @@ GET http://SERVER_A_HOST:8000/analyze/BTCUSDT
 ```
 
 Replace `SERVER_A_HOST` with your private deployment address outside this public repo.
+
+Hermes can also fetch the JSON and pipe it into the handler:
+
+```bash
+curl -s "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
+  | python ~/.hermes/skills/custom/crypto-market-anomaly/handler.py
+```
