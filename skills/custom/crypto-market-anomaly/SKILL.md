@@ -19,12 +19,15 @@ Use this skill to analyze crypto market anomaly inputs from a read-only data API
 
 This skill explains abnormal Price / Funding / Open Interest conditions and formats a notification-ready response. It does not trade, predict certainty, or provide leverage advice.
 
+Executable logic for this repo lives in `skills/custom/crypto_market_anomaly/handler.py`. The `SKILL.md` file is the Hermes instruction layer; `handler.py` is the deterministic Python classifier used by the FastAPI MVP.
+
 ## When to Use
 
 - Use when the user asks Hermes to analyze crypto market anomalies.
 - Use when given a JSON object containing `symbol`, `current_price`, `price_change_5m`, `funding_rate`, `funding_change`, `open_interest`, `oi_change_5m`, and `volume_change_5m`.
 - Use when preparing a Telegram-style market anomaly report.
 - Use when logging an anomaly event for later review.
+- Use when a Telegram command such as `/analyze BTCUSDT` should call the read-only FastAPI API, run the handler, and return a fixed-format report.
 
 Do not use this skill to place orders, close positions, change leverage, or produce direct trade instructions.
 
@@ -130,3 +133,4 @@ price 上漲但 funding 為負，方向不一致，可能不是單純趨勢。
 - [ ] The response includes all seven required sections.
 - [ ] No certainty language is used.
 - [ ] No trade execution instruction is included.
+- [ ] `pytest -q` passes for complete data, missing data, and contradictory-signal cases.

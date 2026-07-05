@@ -1,6 +1,6 @@
 # Hermes Financial MVP
 
-Hermes Financial MVP is a read-only market anomaly analysis specification and Hermes skill draft for crypto market monitoring.
+Hermes Financial MVP is a read-only market anomaly analysis service and Hermes skill draft for crypto market monitoring.
 
 The first version focuses on explaining abnormal market conditions from exchange data and historical metrics. It does not place trades, predict certainty, or provide high-leverage advice.
 
@@ -73,12 +73,47 @@ Exchange APIs / InfluxDB
   -> Markdown event log
 ```
 
+## Executable MVP
+
+This repo now includes the minimal executable pieces:
+
+```text
+app/main.py
+skills/custom/crypto_market_anomaly/handler.py
+tests/test_crypto_market_anomaly.py
+```
+
+Run locally:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Call the read-only API:
+
+```bash
+curl "http://localhost:8000/market/anomaly-input?symbol=BTCUSDT&window=5m"
+curl "http://localhost:8000/analyze/BTCUSDT"
+```
+
+Run tests:
+
+```bash
+pytest -q
+```
+
 ## Repository Layout
 
 ```text
+app/
+  main.py
 docs/
   api-contract.md
   event-log-template.md
+  hermes-call-flow.md
   safety-rules.md
   jetson-install.md
 examples/
@@ -87,6 +122,10 @@ skills/
   custom/
     crypto-market-anomaly/
       SKILL.md
+    crypto_market_anomaly/
+      handler.py
+tests/
+  test_crypto_market_anomaly.py
 ```
 
 ## Public Safety

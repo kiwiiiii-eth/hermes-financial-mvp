@@ -1,0 +1,95 @@
+from fastapi.testclient import TestClient
+
+from app.main import app
+from skills.custom.crypto_market_anomaly.handler import analyze_market_anomaly
+
+
+client = TestClient(app)
+
+
+def complete_payload():
+    return {
+        "symbol": "BTCUSDT",
+        "current_price": 108000.5,
+        "price_change_5m": 1.2,
+        "funding_rate": -0.0012,
+        "funding_change": -0.0004,
+        "open_interest": 1234567890,
+        "oi_change_5m": 8.5,
+        "volume_change_5m": 20.3,
+        "sources": {
+            "price": "binance",
+            "funding": "binance",
+            "open_interest": "binance",
+            "history": "influxdb",
+        },
+        "data_quality": {
+            "missing_fields": [],
+            "stale_seconds": 3,
+        },
+    }
+
+
+def test_complete_data_returns_fixed_report_sections():
+    result = analyze_market_anomaly(complete_payload())
+
+    assert result["anomaly_type"] == "Funding 異常"
+    assert result["needs_human_confirmation"] is True
+    assert "一定會漲" not in result["telegram_message"]
+    assert "一定會跌" not in result["telegram_message"]
+    for section in ["1. 現象", "2. 判斷", "3. 支持證據", "4. 反證", "5. 風險", "6. 建議動作", "7. 是否需要人工確認"]:
+        assert section in result["telegram_message"]
+
+
+def test_missing_data_returns_insufficient_data():
+    payload = complete_payload()
+    del payload["funding_rate"]
+
+    result = analyze_market_anomaly(payload)
+
+    assert result["anomaly_type"] == "無明確訊號"
+    assert "funding_rate" in result["data_quality"]["missing_fields"]
+    assert "資料不足" in result["telegram_message"]
+    assert "自行補資料" in result["counter_evidence"][0]
+
+
+def test_contradictory_signal_uses_unclear_classification():
+    payload = complete_payload()
+    payload.update(
+        {
+            "price_change_5m": 0.2,
+            "funding_rate": 0.0001,
+            "funding_change": 0.0,
+            "oi_change_5m": 0.1,
+            "volume_change_5m": 1.0,
+        }
+    )
+
+    result = analyze_market_anomaly(payload)
+
+    assert result["anomaly_type"] == "無明確訊號"
+    assert "無明確訊號" in result["telegram_message"]
+
+
+def test_fastapi_market_anomaly_input_endpoint():
+    response = client.get("/market/anomaly-input", params={"symbol": "BTCUSDT"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["data_quality"]["missing_fields"] == []
+
+
+def test_fastapi_analyze_symbol_endpoint():
+    response = client.get("/analyze/BTCUSDT")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["anomaly_type"] in {
+        "Short Squeeze",
+        "Long Squeeze",
+        "Funding 異常",
+        "假突破",
+        "無明確訊號",
+    }

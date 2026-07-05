@@ -51,6 +51,15 @@ GET /symbols
 GET /market/latest?symbol=BTCUSDT
 GET /market/history?symbol=BTCUSDT&window=1h&interval=1m
 POST /analysis/anomaly
+GET /analyze/BTCUSDT
 ```
 
 `POST /analysis/anomaly` is optional. It can be used to store completed analysis outputs, but it must not trade.
+
+The executable MVP includes:
+
+- `GET /health`
+- `GET /symbols`
+- `GET /market/anomaly-input`
+- `POST /analysis/anomaly`
+- `GET /analyze/{symbol}`
