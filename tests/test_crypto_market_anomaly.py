@@ -100,6 +100,39 @@ def test_fastapi_analyze_symbol_endpoint():
     }
 
 
+def test_api_token_required_when_configured(monkeypatch):
+    monkeypatch.setenv("HERMES_API_TOKEN", "test-token")
+
+    response = client.get("/market/anomaly-input", params={"symbol": "BTCUSDT"})
+
+    assert response.status_code == 401
+
+
+def test_api_token_accepts_valid_bearer_token(monkeypatch):
+    monkeypatch.setenv("HERMES_API_TOKEN", "test-token")
+
+    response = client.get(
+        "/market/anomaly-input",
+        params={"symbol": "BTCUSDT"},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["symbol"] == "BTCUSDT"
+
+
+def test_api_token_rejects_invalid_bearer_token(monkeypatch):
+    monkeypatch.setenv("HERMES_API_TOKEN", "test-token")
+
+    response = client.get(
+        "/market/anomaly-input",
+        params={"symbol": "BTCUSDT"},
+        headers={"Authorization": "Bearer wrong-token"},
+    )
+
+    assert response.status_code == 403
+
+
 def test_skill_handler_cli_reads_stdin_and_prints_report():
     handler = Path("skills/custom/crypto-market-anomaly/handler.py")
     proc = subprocess.run(

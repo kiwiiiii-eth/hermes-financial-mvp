@@ -15,13 +15,15 @@ Telegram command: /analyze BTCUSDT
 ## Minimal API Call
 
 ```bash
-curl "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m"
+curl -H "Authorization: Bearer $HERMES_API_TOKEN" \
+  "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m"
 ```
 
 ## Minimal Analysis Call
 
 ```bash
-curl "http://SERVER_A_HOST:8000/analyze/BTCUSDT"
+curl -H "Authorization: Bearer $HERMES_API_TOKEN" \
+  "http://SERVER_A_HOST:8000/analyze/BTCUSDT"
 ```
 
 ## Hermes-Callable Handler
@@ -29,14 +31,16 @@ curl "http://SERVER_A_HOST:8000/analyze/BTCUSDT"
 Hermes can call the executable skill handler directly after fetching JSON from the API:
 
 ```bash
-curl -s "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
+curl -s -H "Authorization: Bearer $HERMES_API_TOKEN" \
+  "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
   | python skills/custom/crypto-market-anomaly/handler.py
 ```
 
 For structured JSON output:
 
 ```bash
-curl -s "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
+curl -s -H "Authorization: Bearer $HERMES_API_TOKEN" \
+  "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
   | python skills/custom/crypto-market-anomaly/handler.py --json
 ```
 

@@ -8,6 +8,14 @@ Hermes should not query InfluxDB directly in MVP v1. A read-only FastAPI layer s
 GET /market/anomaly-input?symbol=BTCUSDT&window=5m
 ```
 
+Production requests should include:
+
+```text
+Authorization: Bearer <HERMES_API_TOKEN>
+```
+
+If `HERMES_API_TOKEN` is configured on the server, all data and analysis endpoints require this header. `/health` remains public for liveness checks.
+
 ## Response Schema
 
 ```json
@@ -63,3 +71,20 @@ The executable MVP includes:
 - `GET /market/anomaly-input`
 - `POST /analysis/anomaly`
 - `GET /analyze/{symbol}`
+
+## Authentication
+
+Set `HERMES_API_TOKEN` in the ServerA environment:
+
+```bash
+export HERMES_API_TOKEN="replace-with-a-long-random-token"
+```
+
+Then call protected endpoints with:
+
+```bash
+curl -H "Authorization: Bearer $HERMES_API_TOKEN" \
+  "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m"
+```
+
+Do not commit real token values.

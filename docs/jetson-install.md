@@ -47,11 +47,12 @@ The current Hermes session may not see newly created skills immediately. Start a
 
 ## Server A FastAPI
 
-Deploy the FastAPI server on Server A or another data host:
+Deploy the FastAPI server on Server A or another data host. Prefer binding to localhost or a private interface, then expose it to Jetson through SSH tunnel, VPN, or a locked-down reverse proxy.
 
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+export HERMES_API_TOKEN="replace-with-a-long-random-token"
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 The Jetson Hermes Agent should call:
@@ -66,6 +67,17 @@ Replace `SERVER_A_HOST` with your private deployment address outside this public
 Hermes can also fetch the JSON and pipe it into the handler:
 
 ```bash
-curl -s "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
+curl -s -H "Authorization: Bearer $HERMES_API_TOKEN" \
+  "http://SERVER_A_HOST:8000/market/anomaly-input?symbol=BTCUSDT&window=5m" \
   | python ~/.hermes/skills/custom/crypto-market-anomaly/handler.py
 ```
+
+## Network Exposure
+
+Recommended order:
+
+1. ServerA FastAPI binds to `127.0.0.1`.
+2. Jetson reaches it through SSH tunnel or private VPN.
+3. If a public reverse proxy is unavoidable, require HTTPS, bearer token, firewall allowlist, and rate limiting.
+
+Do not use Zeabur as a public relay for this MVP unless there is a specific reason and the same authentication and firewall rules are applied.
