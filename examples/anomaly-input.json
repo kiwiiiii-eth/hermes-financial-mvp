@@ -1,0 +1,22 @@
+{
+  "symbol": "BTCUSDT",
+  "window": "5m",
+  "timestamp": "2026-07-05T11:30:00+08:00",
+  "current_price": 108000.5,
+  "price_change_5m": 1.2,
+  "funding_rate": -0.0012,
+  "funding_change": -0.0004,
+  "open_interest": 1234567890,
+  "oi_change_5m": 8.5,
+  "volume_change_5m": 20.3,
+  "sources": {
+    "price": "binance",
+    "funding": "binance",
+    "open_interest": "binance",
+    "history": "influxdb"
+  },
+  "data_quality": {
+    "missing_fields": [],
+    "stale_seconds": 3
+  }
+}
