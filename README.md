@@ -73,6 +73,27 @@ Exchange APIs / InfluxDB
   -> Markdown event log
 ```
 
+## Hermes v2 Direction
+
+This repo is the first executable app in a broader Hermes financial research agent system.
+
+Hermes v2 should separate the core agent workflow from individual financial apps:
+
+- Hermes Core: planner, skill router, memory, tool calling, and report integration.
+- Hermes Apps / Skills: focused financial capabilities with explicit input schemas, handlers, tests, safety rules, and deployment notes.
+
+The current app is `crypto-market-anomaly`. Candidate future apps include:
+
+- `funding-analyzer`
+- `open-interest-analyzer`
+- `news-researcher`
+- `etf-monitor`
+- `whale-tracker`
+- `risk-manager`
+- `strategy-reviewer`
+
+See [docs/hermes-v2-roadmap.md](docs/hermes-v2-roadmap.md) for the architecture direction and version path.
+
 ## Executable MVP
 
 This repo now includes the minimal executable pieces:
