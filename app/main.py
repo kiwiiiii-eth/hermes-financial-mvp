@@ -107,6 +107,60 @@ def symbols(_: None = Depends(verify_api_token)) -> dict[str, list[str] | str]:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+@app.get("/market/symbols")
+def market_symbols(
+    exchange: str = Query("binance", pattern="^(binance|bitget)$"),
+    _: None = Depends(verify_api_token),
+) -> dict[str, Any]:
+    """Symbols currently present in Server A's collector, scoped by exchange."""
+    reader = get_reader()
+    if reader is None:
+        return {"exchange": exchange, "symbols": sorted(SAMPLE_MARKET_DATA), "mode": "sample"}
+    try:
+        return {"exchange": exchange, "symbols": market_data.list_symbols(reader, exchange), "mode": "live"}
+    except InfluxQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/market/latest")
+def market_latest(
+    symbols: str = Query(..., description="Comma-separated symbols, e.g. BTCUSDT,ETHUSDT"),
+    exchange: str = Query("binance", pattern="^binance$"),
+    _: None = Depends(verify_api_token),
+) -> dict[str, Any]:
+    """Latest Binance futures data for a small, read-only client subscription."""
+    requested = list(dict.fromkeys(
+        item.upper().strip() for item in symbols.split(",") if item.strip()
+    ))
+    if not requested:
+        raise HTTPException(status_code=422, detail="missing_symbols")
+    if len(requested) > 24:
+        raise HTTPException(status_code=422, detail="too_many_symbols_max_24")
+    reader = get_reader()
+    if reader is None:
+        quotes = {
+            symbol: {
+                "symbol": symbol,
+                "price": data["current_price"],
+                "mark_price": data["current_price"],
+                "change_pct_5m": data["price_change_5m"],
+                "funding_rate": data["funding_rate"],
+                "open_interest_usd": data["open_interest"],
+                "volume_24h": None,
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "stale_seconds": None,
+            }
+            for symbol, data in SAMPLE_MARKET_DATA.items() if symbol in requested
+        }
+        return {"exchange": exchange, "timestamp": datetime.now(timezone.utc).isoformat(), "quotes": quotes, "mode": "sample"}
+    try:
+        payload = market_data.build_latest_quotes(reader, requested, exchange)
+    except InfluxQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    payload["mode"] = "live"
+    return payload
+
+
 def build_market_anomaly_input(symbol: str, window: str = "5m") -> dict[str, Any]:
     normalized_symbol = symbol.upper()
     reader = get_reader()

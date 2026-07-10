@@ -218,13 +218,66 @@ def build_ma_state(reader: InfluxReader, symbol: str) -> dict[str, Any] | None:
     return None
 
 
-def list_symbols(reader: InfluxReader) -> list[str]:
+def list_symbols(reader: InfluxReader, exchange: str | None = None) -> list[str]:
+    exchange_filter = (
+        f' and r.exchange == "{_escape(exchange)}"' if exchange else ""
+    )
     flux = (
         'import "influxdata/influxdb/schema"\n'
         f'schema.tagValues(bucket: "{BUCKET}", tag: "symbol",'
-        ' predicate: (r) => r._measurement == "crypto_futures", start: -1h)'
+        f' predicate: (r) => r._measurement == "crypto_futures"{exchange_filter}, start: -1h)'
     )
     records = reader.query_records(flux)
     return sorted(
         {record["_value"] for record in records if record.get("_value")}
     )
+
+
+def build_latest_quotes(
+    reader: InfluxReader, symbols: list[str], exchange: str = "binance"
+) -> dict[str, Any]:
+    """Return compact, read-only latest quotes for the Live Activity bridge.
+
+    This endpoint deliberately reads only the existing ``crypto_futures``
+    measurement. It never talks to an exchange account and never exposes an
+    Influx credential to callers.
+    """
+    quotes: dict[str, Any] = {}
+    for raw_symbol in symbols:
+        symbol = raw_symbol.upper().strip()
+        if not symbol:
+            continue
+        now_snap = _snapshot(
+            reader.query_records(_last_snapshot_flux(symbol, exchange, start="-3m"))
+        )
+        price = now_snap.get("last_price")
+        if price is None:
+            continue
+
+        past_snap = _snapshot(
+            reader.query_records(
+                _last_snapshot_flux(symbol, exchange, start="-7m", stop="-4m")
+            )
+        )
+        latest_time = now_snap.get("_latest_time")
+        stale_seconds = (
+            int((datetime.now(timezone.utc) - latest_time).total_seconds())
+            if isinstance(latest_time, datetime)
+            else None
+        )
+        quotes[symbol] = {
+            "symbol": symbol,
+            "price": price,
+            "mark_price": now_snap.get("mark_price"),
+            "change_pct_5m": _pct_change(price, past_snap.get("last_price")),
+            "funding_rate": now_snap.get("funding_rate"),
+            "open_interest_usd": now_snap.get("open_interest_usd"),
+            "volume_24h": now_snap.get("volume_24h"),
+            "ts": latest_time.isoformat() if isinstance(latest_time, datetime) else None,
+            "stale_seconds": stale_seconds,
+        }
+    return {
+        "exchange": exchange,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "quotes": quotes,
+    }
