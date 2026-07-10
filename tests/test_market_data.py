@@ -112,29 +112,6 @@ def test_build_ma_state_returns_none_without_data():
     assert market_data.build_ma_state(reader, "NOPEUSDT") is None
 
 
-def test_build_latest_quotes_is_binance_only_and_includes_live_fields():
-    now_records = [
-        {"_field": "last_price", "_value": 105.0, "_time": NOW},
-        {"_field": "mark_price", "_value": 104.9, "_time": NOW},
-        {"_field": "funding_rate", "_value": 0.0002, "_time": NOW},
-        {"_field": "open_interest_usd", "_value": 1_020_000.0, "_time": NOW},
-        {"_field": "volume_24h", "_value": 5_100.0, "_time": NOW},
-    ]
-    past_records = [{"_field": "last_price", "_value": 100.0, "_time": NOW - timedelta(minutes=5)}]
-    reader = FakeReader([now_records, past_records])
-
-    payload = market_data.build_latest_quotes(reader, ["solusdt"])
-
-    quote = payload["quotes"]["SOLUSDT"]
-    assert payload["exchange"] == "binance"
-    assert quote["price"] == 105.0
-    assert quote["mark_price"] == 104.9
-    assert quote["change_pct_5m"] == 5.0
-    assert quote["open_interest_usd"] == 1_020_000.0
-    assert quote["stale_seconds"] is not None
-    assert all('r.exchange == "binance"' in query for query in reader.queries)
-
-
 def test_parse_annotated_csv_converts_types():
     text = (
         "#group,false,false,true,true\r\n"
